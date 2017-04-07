@@ -1,0 +1,160 @@
+#!/bin/bash
+
+##########
+# Function Outputs Usage Message
+##########
+UsageMessage (){
+    printf "Usage:\n"
+    printf "  ./EFileMassDownload <ov_url> <ov_user> <ov_pwd> <CSV File> < -r | -l > <Options>\n"
+    printf "    Options:\n"
+    printf "      -r : Remote SFTP Destination.  Requires Options:\n"
+    printf "           <sftp_host> <sftp_user> <sftp_key_file> <sftp_root>\n"
+    printf "      -l : Local file copy.  Requires Options:\n"
+    printf "           <Root Folder>\n"
+    printf "\n"
+    printf "Example 1 - Remote SFTP Destination:\n"
+    printf "  ./EFileMassDownload \"https://trackor.onevizion.com\" jsmith qwd#dfs5 export.csv -r archive.timeinc.com joe_smith home/joe/id_rsa \n"
+    printf "\n"
+    printf "Example 2 - Local File Copy:\n"
+    printf "  ./EFileMassDownload \"https://trackor.onevizion.com\" jsmith qwd#dfs5 export.csv -l home/joe/data_files_here \n"
+    printf "\n"
+}
+
+# Make sure we have enough parameters , and outpur Usage Message if not.
+if [ -z $1 ]; then
+    UsageMessage
+    exit
+fi
+
+# Quick CSV parsing script 
+parse_csv=$(cat << 'EOF' 
+#!/bin/awk -f 
+{ 
+n = parse_csv($0, data) 
+for (i = 0; ++i <= n;) { 
+printf "%s|%s", data[i], (i < n ? OFS : RS) 
+} 
+} 
+function parse_csv(str, array, field, i) { 
+split( "", array ) 
+str = str "," 
+while ( match(str, /[ \t]*("[^"]*(""[^"]*)*"|[^,]*)[ \t]*,/) ) { 
+field = substr(str, 1, RLENGTH) 
+gsub(/^[ \t]*"?|"?[ \t]*,$/, "", field) 
+gsub(/""/, "\"", field) 
+array[++i] = field 
+str = substr(str, RLENGTH + 1) 
+} 
+return i 
+} 
+EOF 
+)
+
+#########
+# Function makes sure a path string is properly formatted for SCP
+#########
+scpFilePath ()
+{
+#echo $1 | awk -v q="\"" '{ gsub(/ /,"\\ "); print q $0 q }'
+echo $1 | awk -v q="\"" '{ print q $0 q }'
+}
+
+
+
+############
+# Main Program
+############
+
+# Gather initial Parameters
+URL="$1"
+USER="$2"
+PWD="$3"
+FILE="$4"
+DESTINATION="$5"
+
+# Destination can be Local or Remote (SFTP'd)
+#  Get remaining parameters based on which
+if [ "$DESTINATION" = "-r" ]
+then
+    SFTP_HOST="$6"
+    SFTP_USER="$7"
+    SFTP_RSA="$8"
+    SFTP_ROOT="$9"
+elif [ "$DESTINATION" = "-l" ]
+then
+    SFTP_ROOT="$6"
+else
+    UsageMessage
+    exit
+fi
+
+
+# Take CSV file Download list, convert to Pipe Delimited, and run through
+i=0
+while IFS='|' read -r BLOB_DATA_ID SFTP_PATH FILENAME; do
+
+    # Skip header
+    if [ ${i} -eq 0 ]; then
+        i=$((i+1))
+        continue
+    fi
+
+    i=$((i+1))
+    FILEPATH="$SFTP_PATH/$FILENAME"
+    FILEPATH_ESC=$(echo $FILEPATH | sed "s/\"//g")
+
+    printf "%*d: %*s %*s" 5 $i -12 $BLOB_DATA_ID -55 "$FILEPATH_ESC"
+    attempt=0
+    STATE=""
+
+    # Make up to 3 attempts to get the file downloaded
+    while [ "$STATE" != "200" ] && [ $attempt -lt 3 ]
+    do
+        attempt=$((attempt+1))
+        curl --silent -location --create-dirs --dump-header /tmp/blob_headers.tmp --user "$USER:$PWD" --output "/tmp/blob_data.bin" "$URL/efiles/EFileGetBlobFromDb.do?id=$BLOB_DATA_ID"
+        STATE=$(cat /tmp/blob_headers.tmp | grep HTTP | cut -d " " -f 2 | tail -n 1)
+    done
+
+    # If Destination is Remote, then we attempt to SFTP it to the destination
+    if [[ "$DESTINATION" == "-r" ]]
+    then
+        if [ "$STATE" == "200" ]
+        then
+            ssh -o StrictHostKeyChecking=no -n -i "$SFTP_RSA" "$SFTP_USER@$SFTP_HOST" "test -d $SFTP_ROOT/$SFTP_PATH"
+            if [ $? -ne 0 ]
+            then
+                    ssh -o StrictHostKeyChecking=no -n -i "$SFTP_RSA" "$SFTP_USER@$SFTP_HOST" "mkdir -p $SFTP_ROOT/$SFTP_PATH"
+            fi
+            FULL_FILE_NAME="$SFTP_ROOT/$FILEPATH"
+            SCP_FILE_NAME=$(scpFilePath "$FULL_FILE_NAME")
+            COPY_STATE=$(scp -o StrictHostKeyChecking=no -i "$SFTP_RSA" -qpr /tmp/blob_data.bin "$SFTP_USER@$SFTP_HOST:$SCP_FILE_NAME" 2>&1)
+        fi
+    # Destination must be local, so we copy to the given directory.
+    else
+        if [ "$STATE" == "200" ]
+        then
+            mkdir -p "$SFTP_ROOT/$SFTP_PATH"
+            FULL_FILE_NAME="$SFTP_ROOT/$FILEPATH"
+            COPY_STATE=$(cp /tmp/blob_data.bin "$FULL_FILE_NAME" 2>&1)
+        fi
+    fi
+
+    # Give Error message if needed, or OK message
+    if [ "$STATE" != "200" ]
+    then
+        echo " $STATE"
+    elif [ "$COPY_STATE" != "" ]
+    then
+        if [ "$DESTINATION" == "-r" ]
+        then
+            printf " SFTP_ERROR\n\t$COPY_STATE\n"
+        else
+            printf " COPY_ERROR\n\t$COPY_STATE\n"
+        fi
+    else
+        echo " OK"
+    fi
+
+    # Clean up temporary files
+    rm /tmp/blob_data.bin /tmp/blob_headers.tmp
+done < <(awk "$parse_csv" $FILE | sed 's/| /|/g' | sed 's/.$//g')

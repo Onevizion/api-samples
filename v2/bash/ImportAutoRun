@@ -1,0 +1,98 @@
+#!/bin/bash
+
+# Get List of CSV Files
+#  For Each File
+#    Run Import URL
+#    Move File to Archive folder
+
+export PATH=.:/bin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:$PATH
+
+# EmailError function
+# Parameters:
+# $1 = File with error
+# $2 = Folder where file sits
+# $3 = Attachment to send with email
+function EmailError {
+	echo "Logs attached." | mailx -s "ImportCheck Error Processing $2/$1" -S ssl-verify=ignore -S smtp-auth=login -S smtp=mail.onevizion.com -S from="no-reply@onevizion.com" -S smtp-auth-user=vendor@onevizion.com -S smtp-auth-password=super22 -S ssl-verify=ignore -a $3 ovsupport@onevizion.com
+}
+
+# Quick CSV parsing script
+parse_csv=$(cat << 'EOF'
+    #!/bin/awk -f
+    {
+     n = parse_csv($0, data)
+     for (i = 0; ++i <= n;) {
+        printf "%s|%s", data[i], (i < n ? OFS : RS)
+        }
+      }
+    function parse_csv(str, array, field, i) {
+      split( "", array )
+      str = str ","
+      while ( match(str, /[ \t]*("[^"]*(""[^"]*)*"|[^,]*)[ \t]*,/) ) {
+        field = substr(str, 1, RLENGTH)
+        gsub(/^[ \t]*"?|"?[ \t]*,$/, "", field)
+        gsub(/""/, "\"", field)
+        array[++i] = field
+        str = substr(str, RLENGTH + 1)
+      }
+      return i
+    }
+EOF
+)
+
+
+# go through ImportCheck.csv file to get a list of all folders to check in for files
+while IFS='|' read -r FILE_NAME_PART INTAKE_FOLDER IMP_ACTION IMP_SPEC URL; do
+	echo "Looking in Folder $INTAKE_FOLDER for $FILE_NAME_PART files"
+	cd "$INTAKE_FOLDER"
+
+	# make sure we have Archvie and log folders for process
+	if [ ! -d "Archive" ]; then
+		mkdir Archive
+	fi
+	if [ ! -d "log" ]; then
+		mkdir log
+	fi
+
+	# Get list of CSV files in this folder
+	for f in $FILE_NAME_PART; do
+		if [ -e "$f" ]; then
+			echo "Processing $f"
+			BASENAME=${f%.*}
+			EXTENSION=${f##*.}
+			if [ "$EXTENSION" == "pgp" ]; then
+				echo "PGP Encryption detected."
+				FILENAME="$BASENAME"
+				gpg --output "$INTAKE_FOLDER/$FILENAME" --decrypt "$INTAKE_FOLDER/$f" 2>&1 >> "log/$f.gpglog"
+				mv "$f" Archive
+			else
+				FILENAME="$f"
+			fi
+
+			# Execute the URL to run the Import
+            curl --header "platformAgent: api" --form "impSpecId=$IMP_SPEC" --form "action=$IMP_ACTION" --form "file=@$FILENAME" --stderr "log/$FILENAME.log" --silent --show-error $URL > "log/$FILENAME.response"
+
+			# Handle Errors or Archive the file
+			if [ -s "log/$FILENAME.log" ]; then
+				echo "Error on $FILENAME"
+				EmailError "$FILENAME" "$INTAKE_FOLDER" "$INTAKE_FOLDER/log/$FILENAME.log"
+			else
+				RESPONSE=$(cat "log/$FILENAME.response" | grep userMessages)
+				if [ "x$RESPONSE" != "x" ]; then
+					RESPONSE=$(echo $RESPONSE | awk 'BEGIN{FS="[";RS="]"}{print$2}')
+					RESPONSE="${RESPONSE#"${RESPONSE%%[![:space:]]*}"}"
+					RESPONSE="${RESPONSE%"${RESPONSE##*[![:space:]]}"}"
+				else
+					RESPONSE="Error"
+				fi
+				if [ "x$RESPONSE" != "x" ]; then
+					echo "Error on $FILENAME"
+					EmailError "$FILENAME" "$INTAKE_FOLDER" "$INTAKE_FOLDER/log/$FILENAME.response"
+				else
+					echo "Success on $FILENAME"
+					mv "$FILENAME" Archive
+				fi
+			fi
+		fi
+	done
+done < <(awk "$parse_csv" ./ImportAutoRun.csv | sed 's/| /|/g' | sed 's/.$//g')

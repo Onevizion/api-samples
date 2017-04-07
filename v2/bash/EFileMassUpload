@@ -1,0 +1,87 @@
+#!/bin/bash
+
+# Quick code to parse a csv file and upload files to an EFile field on a Trackor
+# Creates a temporary json file called 'efile_load.json' and removed after being used.
+# Creates a log file called 'efile_log.log' that stores output from cURL.
+# Make sure that this will not delete any files you have currently.
+
+if [ $# -ne 4 ]; then
+    echo 'This script requires four parameters: website, username, password, and CSV file to process.'
+    echo 'For example:  bash LoadEfile test.onevizion.com username mypassword efile_upload.csv'
+    exit
+fi
+
+# Verify file exists
+[ ! -f $4 ] && { echo "$4 file not found"; exit 99; }
+
+# Quick CSV parsing script
+parse_csv=$(cat << 'EOF'
+    #!/bin/awk -f
+    {
+     n = parse_csv($0, data)
+     for (i = 0; ++i <= n;) {
+        printf "%s|%s", data[i], (i < n ? OFS : RS)
+        }
+      }
+    function parse_csv(str, array, field, i) {
+      split( "", array )
+      str = str ","
+      while ( match(str, /[ \t]*("[^"]*(""[^"]*)*"|[^,]*)[ \t]*,/) ) {
+        field = substr(str, 1, RLENGTH)
+        gsub(/^[ \t]*"?|"?[ \t]*,$/, "", field)
+        gsub(/""/, "\"", field)
+        array[++i] = field
+        str = substr(str, RLENGTH + 1)
+      }
+      return i
+    }
+EOF
+)
+
+WEBSITE=$1
+USERNAME=$2
+PASSWORD=$3
+PRCFILE=$4
+RN=0
+
+# Create log file
+echo -n "" > efile_log.log
+
+# Loop through process file
+while IFS='|' read -r TRACKOR_KEY TRACKOR_TYPE FIELD_NAME FILE_NAME PATH_TO_FILE; do
+
+    # Skip header
+    if [ ${RN} -eq 0 ]; then
+        RN=$((RN+1))
+        continue
+    fi
+
+    # Convert file to base64
+    BFILE=$(base64 "${PATH_TO_FILE}")
+    echo $BFILE > temp.txt
+    # Creates temporary json file to load
+    cat <<EOF > efile_load.json
+{
+  "ConfigFields": {
+    "${FIELD_NAME}": {
+      "fileName" : "${FILE_NAME}",
+      "data" : "${BFILE}",
+    }
+  }
+}
+EOF
+
+
+    # Load efile
+    curl --include --header "Content-type: application/json" --request PUT "https://${USERNAME}:${PASSWORD}@${WEBSITE}/api/v1/trackor_type/${TRACKOR_TYPE}?TRACKOR_KEY=${TRACKOR_KEY}" --data @efile_load.json --silent --output last_efile_log.log
+
+    # Give status
+    echo "Row ${RN} - ${TRACKOR_TYPE} - ${TRACKOR_KEY} - ${FIELD_NAME} - ${FILE_NAME}"
+    echo "Row ${RN} - ${TRACKOR_TYPE} - ${TRACKOR_KEY} - ${FIELD_NAME} - ${FILE_NAME}" >> efile_log.log
+    cat last_efile_log.log >> efile_log.log
+    RN=$((RN+1))
+done < <(awk "$parse_csv" $PRCFILE | sed 's/| /|/g' | sed 's/.$//g')
+
+# Cleanup
+rm efile_load.json
+rm last_efile_log.log
