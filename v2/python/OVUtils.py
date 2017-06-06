@@ -538,8 +538,9 @@ class EMail(object):
 	
 	Attributes:
 		server: the SSL SMTP server for the mail connection
-		port: the port to conenct to- 465 by default
-		tls: True if TLS is needed, else false.
+		port: the port to conenct to- 587 by default
+		security: None, SSL, or STARTTLS
+		tls: True if TLS is needed, else false.  Provided for Backwards compatibility
 		userName: the "From" and login to the SMTP server
 		password: the password to conenct to the SMTP server
 		to: array of email addresses to send the message to
@@ -551,8 +552,9 @@ class EMail(object):
 
 	def __init__(self):
 		self.server = "mail.onevizion.com"
-		self.port = 465
-		self.tls = "False"
+		self.port = 587
+		self.security = "STARTTLS"
+		self.tls = "False" 
 		self.userName = ""
 		self.password = ""
 		self.to = []
@@ -634,12 +636,14 @@ class EMail(object):
 
 		
 		if self.tls in [True,1,"1","True","TRUE","true","yes","Yes","YES"]:
+			self.security = 'STARTTLS'
+		if self.security.upper() in ['STARTTLS','TLS']:
 			send = smtplib.SMTP(self.server, int(self.port))
-			#send.ehlo()
 			send.starttls()
-			#send.ehlo()
-		else:
+		elif self.security.upper() in ['SSL','SSL/TLS']:
 			send = smtplib.SMTP_SSL(self.server, self.port)
+		else:
+			send = smtplib.SMTP(self.server, int(self.port))
 		send.login(str(self.userName), str(self.password))
 		send.sendmail(str(self.userName),self.to, msg.as_string())
 		send.quit()
