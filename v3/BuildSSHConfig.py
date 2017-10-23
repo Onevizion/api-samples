@@ -135,6 +135,10 @@ KeyList = []
 
 # Add block for each Server in the list
 for Server in ServerListRequest.jsonData:
+	if Server["EC2_PRIVATE_DNS"].endswith('.ov.internal'):
+		ShortName = Server["EC2_PRIVATE_DNS"][:-12]
+	else:
+		ShortName = Server["EC2_PRIVATE_DNS"]
 	ConfigFile.write("""### {Tag}
 Host {ShortName}
   HostName {PrivateDNS}
@@ -145,7 +149,7 @@ Host {ShortName}
 
 """.format(
 		Tag=Server["EC2_CLIENT_TAG"],
-		ShortName=Server["EC2_PRIVATE_DNS"].rstrip('.ov.internal'),
+		ShortName=ShortName,
 		PrivateDNS=Server["EC2_PRIVATE_DNS"],
 		WebUser=WebUser,
 		WebKeyFile=WebKeyFile
