@@ -5,8 +5,6 @@ import onevizion
 # Handle command arguments
 import argparse
 Description="""Email Patch Notes to the PatchNotes mailing list.
-
-It does this by getting a list of Versions (from the Version trackor) between the Version you give it, and the PreviousVersion that you give it, then taking a list of those Versions and getting a list of Issues (from the Issue Trackor) for each to get a complete list of changes between those versions.
 """
 EpiLog = onevizion.PasswordExample + """\n\n
 """
@@ -37,7 +35,7 @@ parser.add_argument(
 	help="Print extra debug messages and save to a file. Attach file to email if sent."
 	)
 args = parser.parse_args()
-PasswordsFile = args.passwords
+PasswordsFile = args.parameters
 ThisVersion = args.Version
 Versions = [args.Version]
 PreviousVersion = args.PreviousVersion
