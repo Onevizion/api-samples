@@ -25,6 +25,7 @@ parser.add_argument(
 	default=0, 
 	help="Include Changes from Previous build."
 	)
+parser.add_argument("-P", "--product", metavar="Product", help="Product Name for the Version list.", default="OneVizion")
 parser.add_argument("-t", "--to", help="Comma Sepearated list of email addresses to send this email 'To'", default="")
 parser.add_argument("-p", "--parameters", metavar="ParametersFile", help="JSON file where parameters are stored.", default="Parameters.json")
 parser.add_argument(
@@ -36,6 +37,7 @@ parser.add_argument(
 	)
 args = parser.parse_args()
 PasswordsFile = args.parameters
+Product = args.product
 ThisVersion = args.Version
 Versions = [args.Version]
 PreviousVersion = args.PreviousVersion
@@ -101,7 +103,8 @@ def VersionInfo(GivenVersion):
 		)
 	VersionRequest.read(
 		filters={
-			"TRACKOR_KEY":QueryVersion
+			"TRACKOR_KEY":QueryVersion,
+			"Product.TRACKOR_KEY":Product
 			} ,
 		fields=[
 			'TRACKOR_KEY',
@@ -127,8 +130,9 @@ VersionRequest = onevizion.Trackor(
 	password=PasswordData["trackor.onevizion.com"]["Password"]
 	)
 
-Search = 'less_or_equal(VER_REL_DATE,{NewerVersionDate})'.format(
-		NewerVersionDate=NewerVersion['ReleaseDate'].strftime('%Y-%m-%d')
+Search = 'equal(Product.TRACKOR_KEY, {Product}) and less_or_equal(VER_REL_DATE,{NewerVersionDate})'.format(
+		NewerVersionDate=NewerVersion['ReleaseDate'].strftime('%Y-%m-%d'),
+		Product=Product
 		)
 if args.includeprev > 0:
 	Search += ' and greater_or_equal(VER_REL_DATE, {OlderVersionDate})'.format(
