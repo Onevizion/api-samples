@@ -160,7 +160,7 @@ for row in ParamFile:
 	except:
 		Errors[FullFilePath+'-ReadErrors'] = str(sys.exc_info()[0])
 		ErrorCSV.writerow(row)
-		LogError = 'Error: Row: ' + str(i) + " => " + str(OVCall.errors)
+		LogError = 'Error: Row: ' + str(i) + " => Cannot read file"
 		print LogError
 		LogFile.write(LogError+"\n")
 		continue
