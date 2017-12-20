@@ -106,11 +106,11 @@ Message(json.dumps(NeededVersions,indent=2), 1)
 #Build a local folder in which to place the downloaded files
 VersionRootFolder = "{CurVer}-to-{ThisVer}".format(CurVer=CurrentVersion,ThisVer=ThisVersion)
 if not os.path.exists(VersionRootFolder):
-    os.makedirs(VersionRootFolder)
+	os.makedirs(VersionRootFolder)
 if not os.path.exists(VersionRootFolder+"/db"):
-    os.makedirs(VersionRootFolder+"/db")
+	os.makedirs(VersionRootFolder+"/db")
 if not os.path.exists(VersionRootFolder+"/db/rollback"):
-    os.makedirs(VersionRootFolder+"/db/rollback")
+	os.makedirs(VersionRootFolder+"/db/rollback")
 
 # Download all the needed script files and executables
 Message("Downloading files to folder {RootDir}".format(RootDir=VersionRootFolder))
