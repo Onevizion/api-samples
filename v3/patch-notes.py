@@ -199,13 +199,19 @@ for Version,RelDate in VersionList.items():
 	IssueList.read(
 		filters={
 			"Version.TRACKOR_KEY":Version,
+			"Product.TRACKOR_KEY":"OneVizion",
 			"VQS_IT_DONT_INCLUDE_IN_REL_NOTES":"0"
 			} ,
 		fields=[
 			'TRACKOR_KEY',
 			'VQS_IT_XITOR_NAME',
-			'VQS_IT_RELEASE_NOTES'
-			]
+			'VQS_IT_RELEASE_NOTES',
+			'TRACKOR_CLASS_ID'
+			],
+		sort={
+			'TRACKOR_CLASS_ID':'desc',
+			'TRACKOR_KEY':'asc'
+			}
 		)
 	if len(IssueList.errors) > 0:
 		Notif('Patch Notes Failed','Patch Notes Failed.','development@onevizion.com')
@@ -218,6 +224,7 @@ for Version,RelDate in VersionList.items():
 			Iss['IssueID']=Issue['TRACKOR_KEY']
 			Iss['Summary']=Issue['VQS_IT_XITOR_NAME']
 			Iss['Notes']=Issue['VQS_IT_RELEASE_NOTES']
+			Iss['IssueType']=Issue['TRACKOR_CLASS_ID']
 			Issues.append(Iss)
 		Ver['Issues']=Issues
 	if Ver != {}:
@@ -238,7 +245,11 @@ for Version in Versions:
 		Version=Version['Version'],
 		ReleaseDate=Version['ReleaseDate'].strftime('%Y-%m-%d')
 		)
+	IssueType = ""
 	for Issue in Version['Issues']:
+		if IssueType != Issue['IssueType']:
+			IssueType = Issue['IssueType']
+			Body += "\n{IssueType}s:\n===========\n".format(IssueType=IssueType)
 		Body += "\n{IssueID}:  {Summary}\n".format(
 			IssueID=Issue['IssueID'],
 			Summary=Issue['Summary']
