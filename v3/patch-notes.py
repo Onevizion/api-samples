@@ -13,20 +13,20 @@ parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpForm
 parser.add_argument("Version", help="Version to Release")
 parser.add_argument("PreviousVersion", help="Previous Version released last")
 parser.add_argument(
-	"-i", 
-	"--includeprev", 
-	action='count', 
-	default=0, 
+	"-i",
+	"--includeprev",
+	action='count',
+	default=0,
 	help="Include Changes from Previous build."
 	)
 parser.add_argument("-P", "--product", metavar="Product", help="Product Name for the Version list.", default="OneVizion")
 parser.add_argument("-t", "--to", help="Comma Sepearated list of email addresses to send this email 'To'", default="")
 parser.add_argument("-p", "--parameters", metavar="ParametersFile", help="JSON file where parameters are stored.", default="Parameters.json")
 parser.add_argument(
-	"-v", 
-	"--verbose", 
-	action='count', 
-	default=0, 
+	"-v",
+	"--verbose",
+	action='count',
+	default=0,
 	help="Print extra debug messages and save to a file. Attach file to email if sent."
 	)
 args = parser.parse_args()
@@ -73,7 +73,7 @@ def Notif (Title,Body,To):
 		msg.to = [To]
 	msg.subject = Title
 	msg.message = Body
-	
+
 	msg.info.update(Trace)
 
 	msg.sendmail()
@@ -90,9 +90,9 @@ def VersionInfo(GivenVersion):
 		VerType = 'Production'
 	# Find the Release Date for Prod Version
 	VersionRequest = onevizion.Trackor(
-		trackorType = 'Version', 
-		URL = 'trackor.onevizion.com', 
-		userName=PasswordData["trackor.onevizion.com"]["UserName"], 
+		trackorType = 'Version',
+		URL = 'trackor.onevizion.com',
+		userName=PasswordData["trackor.onevizion.com"]["UserName"],
 		password=PasswordData["trackor.onevizion.com"]["Password"]
 		)
 	VersionRequest.read(
@@ -125,7 +125,7 @@ def VersionSplit(ThisVersion):
 
 def GetVersionsList(VersionsStr,VersionDate):
 	VersionRequest = onevizion.Trackor(
-		trackorType = 'Version', 
+		trackorType = 'Version',
 		paramToken = 'trackor.onevizion.com'
 		)
 	VersionRequest.read(
@@ -189,9 +189,9 @@ Versions=[]
 
 # Get Issues for any Versions attached to this Email
 IssueList = onevizion.Trackor(
-	trackorType = 'Issue', 
-	URL = 'trackor.onevizion.com', 
-	userName=PasswordData["trackor.onevizion.com"]["UserName"], 
+	trackorType = 'Issue',
+	URL = 'trackor.onevizion.com',
+	userName=PasswordData["trackor.onevizion.com"]["UserName"],
 	password=PasswordData["trackor.onevizion.com"]["Password"]
 	)
 for Version,RelDate in VersionList.items():
@@ -231,7 +231,7 @@ for Version,RelDate in VersionList.items():
 		Versions.append(Ver)
 
 
-# Send The Email since everthing is successful			
+# Send The Email since everthing is successful
 Title = "OneVizion "+ThisVersion+" deployed in "+NewerVersion['Type']
 Body = "OneVizion "+ThisVersion+" deployed in "+NewerVersion['Type']
 if NewerVersion['Type'] == 'UAT':
@@ -250,7 +250,7 @@ for Version in Versions:
 		if IssueType != Issue['IssueType']:
 			IssueType = Issue['IssueType']
 			Body += "\n{IssueType}s:\n===========\n".format(IssueType=IssueType)
-		Body += "\n{IssueID}:  {Summary}\n".format(
+		Body += "\n{IssueID}:  {Summary}\t\n".format(
 			IssueID=Issue['IssueID'],
 			Summary=Issue['Summary']
 			)
