@@ -82,8 +82,8 @@ def Notif (Title,Body,To):
 
 def VersionInfo(GivenVersion):
 	ThisVersion={}
-	if GivenVersion[-3:][:-1] == "RC":
-		QueryVersion = GivenVersion[:-4]
+	if 'RC' in GivenVersion:
+		QueryVersion = GivenVersion.split('-RC')[0]
 		VerType = 'UAT'
 	else:
 		QueryVersion = GivenVersion
@@ -124,6 +124,7 @@ def VersionSplit(ThisVersion):
 	return VersionParts
 
 def GetVersionsList(VersionsStr,VersionDate):
+	AllVers=[]
 	VersionRequest = onevizion.Trackor(
 		trackorType = 'Version',
 		paramToken = 'trackor.onevizion.com'
@@ -137,7 +138,19 @@ def GetVersionsList(VersionsStr,VersionDate):
 		sort={'TRACKOR_KEY':'asc'}
 		)
 
-	AllVers=[]
+	for Version in VersionRequest.jsonData:
+		AllVers.append(VersionSplit(Version['TRACKOR_KEY']))
+		VersionDate[Version['TRACKOR_KEY']]=Version['VER_REL_DATE']
+
+	VersionRequest.read(
+		search="equal(TRACKOR_KEY, 19.*) and equal(Product.TRACKOR_KEY, OneVizion) and is_not_null(VER_REL_DATE)",
+		fields=[
+			'TRACKOR_KEY',
+			'VER_REL_DATE'
+			],
+		sort={'TRACKOR_KEY':'asc'}
+		)
+
 	for Version in VersionRequest.jsonData:
 		AllVers.append(VersionSplit(Version['TRACKOR_KEY']))
 		VersionDate[Version['TRACKOR_KEY']]=Version['VER_REL_DATE']
