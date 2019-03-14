@@ -74,7 +74,7 @@ ParameterData = onevizion.GetParameters(ParametersFile)
 ServerListRequest = onevizion.Trackor(trackorType = 'server', paramToken = 'trackor.onevizion.com')
 ServerListRequest.read(
 		filters={
-			'VQS_SVR_LOCATION':'AWS - Vendor',
+			'VQS_SVR_LOCATION':'AWS',
 			'EC2_PRIVATE_DNS':'not null'
 			}, 
 		fields=[
