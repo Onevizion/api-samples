@@ -265,10 +265,10 @@ for Version in Versions:
 			Body += "\n{IssueType}s:\n===========\n".format(IssueType=IssueType)
 		Body += "\n{IssueID}:  {Summary}\t\n".format(
 			IssueID=Issue['IssueID'],
-			Summary=Issue['Summary']
+			Summary=Issue['Summary'].encode('ascii', 'ignore').decode('ascii')
 			)
 		if Issue['Notes'] is not None:
-			Body += "{Notes}\n".format(Notes=Issue['Notes'])
+			Body += "{Notes}\n".format(Notes=Issue['Notes'].encode('ascii', 'ignore').decode('ascii'))
 		#else:
 			Body += '\n'
 
