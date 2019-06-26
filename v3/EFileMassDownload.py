@@ -8,9 +8,11 @@ import pysftp
 # Handle command arguments
 import argparse
 EpiLog = onevizion.PasswordExample + """\n\nCSV File needs columns:
-	BLOB_DATA_ID - Blob Data ID for the file as found in OveVizion System
+	TRACKOR_ID - Easy to obtain if you export from Trackor Browser as csv api compatible.
+	FIELD_NAME - Field Name to get file from
+	TRACKOR_KEY - Easy to obtain if you export from Trackor Browser as csv api compatible.
 	PATH - FilePath within the Root Folder that you wish this to be saved into
-	FILENAME - FileName to be given this file in the PATH's folder.
+	FILE_NAME - FileName to be given this file in the PATH's folder.
 """
 parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,epilog=EpiLog)
 parser.add_argument("OV_URL", help="The OneVizion URL from which to download the files.")
