@@ -13,6 +13,22 @@ EpiLog = onevizion.PasswordExample + """\n\nCSV File needs columns:
 	TRACKOR_KEY - Easy to obtain if you export from Trackor Browser as csv api compatible.
 	PATH - FilePath within the Root Folder that you wish this to be saved into
 	FILE_NAME - FileName to be given this file in the PATH's folder.
+Example password.json.
+{
+    "demo.onevizion.com": {
+        "UserName": "api",
+        "Password": "xxxx",
+        "Url": "demo.onevizion.com"
+    },
+    "SMTP": {
+        "UserName": "user@onevizion.com",
+        "Password": "XXXXX",
+        "Server": "smtp.office365.com",
+        "To": "user@onevizion.com",
+        "TLS": "True",
+        "Port": "587"
+    }
+}
 """
 parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,epilog=EpiLog)
 parser.add_argument("OV_URL", help="The OneVizion URL from which to download the files.")
