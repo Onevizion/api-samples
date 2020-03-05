@@ -153,7 +153,7 @@ for row in ParamFile:
 			Errors[FullFilePath+'-ReadErrors'] = 'Empty file'
 			ErrorCSV.writerow(row)
 			LogError = 'Error: Row: ' + str(i) + " => " + "Empty file"
-			print LogError
+			print (LogError)
 			LogFile.write(LogError+"\n")
 			continue
 
@@ -161,7 +161,7 @@ for row in ParamFile:
 		Errors[FullFilePath+'-ReadErrors'] = str(sys.exc_info()[0])
 		ErrorCSV.writerow(row)
 		LogError = 'Error: Row: ' + str(i) + " => Cannot read file"
-		print LogError
+		print (LogError)
 		LogFile.write(LogError+"\n")
 		continue
 
@@ -195,14 +195,13 @@ for row in ParamFile:
 		)
 	if len(OVCall.errors) > 0:
 		Errors[FullFilePath+'-ImportErrors'] = str(OVCall.errors)
-		Errors[FullFilePath+'-HTTPStatus'] = str(OVCall.OVCall.request.status_code)+" = "+OVCall.OVCall.request.reason+"\n"+OVCall.OVCall.request.text
 		ErrorCSV.writerow(row)
 		LogError = 'Error: Row: ' + str(i) + " => " + str(OVCall.errors)
-		print LogError
+		print (LogError)
 		LogFile.write(LogError+"\n")
 
 	LogRow = "Row %d - %s" % (i, FileName)
-	print LogRow
+	print (LogRow)
 	LogFile.write(LogRow+"\n")
 
 ErrorCSVFile.close()
