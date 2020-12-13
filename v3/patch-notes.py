@@ -1,6 +1,7 @@
 import json
 import datetime
 import operator
+import re
 import onevizion
 
 # Handle command arguments
@@ -62,6 +63,10 @@ Trace = onevizion.Config["Trace"]
 Issues = OrderedDict()
 
 
+def cleanVersionNumber(Version):
+	# Remove the OneVizion Product alias from the Version if present
+	return re.sub('\(OneVizion\)','',Version).strip()
+
 def Notif (Title,Body,To):
 	"""Sends Mail notifying if an error occurs"""
 
@@ -106,7 +111,7 @@ def VersionInfo(GivenVersion):
 			]
 		)
 	if len(VersionRequest.errors) == 0:
-		ThisVersion['Version'] = VersionRequest.jsonData[0]['TRACKOR_KEY']
+		ThisVersion['Version'] = cleanVersionNumber(VersionRequest.jsonData[0]['TRACKOR_KEY'])
 		ThisVersion['ReleaseDate'] = datetime.datetime.strptime(VersionRequest.jsonData[0]['VER_REL_DATE'],'%Y-%m-%d')
 		ThisVersion['Type'] = VerType
 
@@ -139,7 +144,7 @@ def GetVersionsList(VersionsStr,VersionDate):
 		)
 
 	for Version in VersionRequest.jsonData:
-		AllVers.append(VersionSplit(Version['TRACKOR_KEY']))
+		AllVers.append(VersionSplit(cleanVersionNumber(Version['TRACKOR_KEY'])))
 		VersionDate[Version['TRACKOR_KEY']]=Version['VER_REL_DATE']
 
 	VersionRequest.read(
@@ -152,7 +157,24 @@ def GetVersionsList(VersionsStr,VersionDate):
 		)
 
 	for Version in VersionRequest.jsonData:
-		AllVers.append(VersionSplit(Version['TRACKOR_KEY']))
+		AllVers.append(VersionSplit(cleanVersionNumber(Version['TRACKOR_KEY'])))
+		VersionDate[Version['TRACKOR_KEY']]=Version['VER_REL_DATE']
+
+	for Version in VersionRequest.jsonData:
+		AllVers.append(VersionSplit(cleanVersionNumber(Version['TRACKOR_KEY'])))
+		VersionDate[Version['TRACKOR_KEY']]=Version['VER_REL_DATE']
+
+	VersionRequest.read(
+		search="equal(TRACKOR_KEY, 2*) and equal(Product.TRACKOR_KEY, OneVizion) and is_not_null(VER_REL_DATE)",
+		fields=[
+			'TRACKOR_KEY',
+			'VER_REL_DATE'
+			],
+		sort={'TRACKOR_KEY':'asc'}
+		)
+
+	for Version in VersionRequest.jsonData:
+		AllVers.append(VersionSplit(cleanVersionNumber(Version['TRACKOR_KEY'])))
 		VersionDate[Version['TRACKOR_KEY']]=Version['VER_REL_DATE']
 
 	AllVers.sort(key=operator.itemgetter(0,1,2))
@@ -251,7 +273,7 @@ if NewerVersion['Type'] == 'UAT':
 	Body = Body+", we are planing production release on "+NewerVersion['ReleaseDate'].strftime('%Y-%m-%d')+"."
 else:
 	Body = Body+"."
-Body = Body+" Following is list of changes since "+OlderVersion['Version']+" version:"
+Body = Body+" Following is a list of changes since "+OlderVersion['Version']+" version:"
 
 for Version in Versions:
 	Body += "\n\n{Version}:  {ReleaseDate}\n================================================".format(
